@@ -1,0 +1,6 @@
+<div class="layout-container">
+    <app-bubble-background [animationTrigger]="animateTransition"></app-bubble-background>
+    <div class="content-wrapper" [class.animate-out]="animateTransition">
+        <router-outlet></router-outlet>
+    </div>
+</div>

@@ -1,0 +1,49 @@
+<div class="conductores-container">
+    <div class="header">
+        <h1>Selecciona un Conductor</h1>
+        <p>Elige el conductor para iniciar la detección de fatiga</p>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="loading">
+        <p>Cargando conductores...</p>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="error && !loading" class="error">
+        <p>⚠️ {{ error }}</p>
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!loading && !error && conductores.length > 0" class="table-wrapper">
+        <table class="conductores-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellidos</th>
+                    <th>Licencia</th>
+                    <th>Email</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let conductor of conductores" class="conductor-row">
+                    <td>{{ conductor.nombre }}</td>
+                    <td>{{ conductor.apellidos }}</td>
+                    <td>{{ conductor.numero_licencia || conductor.licencia }}</td>
+                    <td>{{ conductor.email }}</td>
+                    <td>
+                        <button class="btn-select" (click)="selectConductor(conductor)">
+                            Seleccionar
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- No data -->
+    <div *ngIf="!loading && !error && conductores.length === 0" class="no-data">
+        <p>No hay conductores disponibles</p>
+    </div>
+</div>
