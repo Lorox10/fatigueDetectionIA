@@ -73,7 +73,7 @@ git --version
 ### 1. Clonar el Repositorio
 
 ```powershell
-git clone https://github.com/tuusuario/fatigueDetectionIA.git
+git clone git clone git clone https://github.com/Lorox10/fatigueDetectionIA
 cd fatigueDetectionIA
 ```
 
@@ -200,6 +200,7 @@ ng serve --open
 ## 👨‍💻 Autor
 
 **Lorenzo Vargas Sala**
+https://github.com/Lorox10
 
 ---
 
