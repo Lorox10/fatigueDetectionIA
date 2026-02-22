@@ -13,28 +13,27 @@
 .bubble {
   position: absolute;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(200, 150, 255, 0.15) 0%, rgba(150, 200, 255, 0.1) 100%);
-  border: 2px solid rgba(150, 150, 255, 0.2);
-  box-shadow: inset -2px -2px 5px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  background: linear-gradient(135deg, rgba(4, 8, 114, 0.185) 0%, rgba(3, 43, 85, 0.1) 100%);
+  border: 2px solid rgba(8, 8, 193, 0.14);
+  box-shadow: inset -2px -2px 5px rgba(255, 255, 255, 0.615);
+  transform: translate3d(var(--x, 0px), var(--y, 0px), 0);
+  will-change: transform;
   pointer-events: none;
 }
 
 .bubble.animate {
-  animation: bubbleFlow 3s ease-in-out forwards;
+  animation: bubblePulse 2.5s ease-in-out forwards;
   animation-delay: var(--animation-delay, 0s);
 }
 
-@keyframes bubbleFlow {
+@keyframes bubblePulse {
   0% {
-    transform: translate(0, 0) scale(1);
     opacity: 1;
   }
   50% {
-    transform: translate(var(--random-x, 50px), var(--random-y, -50px)) scale(1.1);
+    opacity: 0.6;
   }
   100% {
-    transform: translate(var(--random-x-end, 100px), var(--random-y-end, -100px)) scale(0.8);
-    opacity: 0.3;
+    opacity: 1;
   }
 }

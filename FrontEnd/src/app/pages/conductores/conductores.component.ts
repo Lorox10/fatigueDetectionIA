@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { ConductoresService, Conductor } from '../../services/conductores.service';
 
 @Component({
@@ -14,7 +15,10 @@ export class ConductoresComponent implements OnInit {
   loading: boolean = true;
   error: string | null = null;
 
-  constructor(private conductoresService: ConductoresService) {}
+  constructor(
+    private conductoresService: ConductoresService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
     this.loadConductores();
@@ -39,6 +43,13 @@ export class ConductoresComponent implements OnInit {
 
   selectConductor(conductor: Conductor) {
     console.log('Conductor seleccionado:', conductor);
-    // Próxima parte: navegar a página de detección
+    // Navegar a página de detección con datos del conductor
+    this.router.navigate(['/deteccion'], {
+      queryParams: {
+        nombre: conductor.nombre,
+        apellidos: conductor.apellidos,
+        id: conductor.id
+      }
+    });
   }
 }

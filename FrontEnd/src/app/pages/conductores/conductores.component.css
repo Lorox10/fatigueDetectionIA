@@ -26,16 +26,16 @@
 h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0c2130);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: 10px;
+  margin-bottom: 0px;
 }
 
 .header p {
   font-size: 1.1rem;
-  color: #999;
+  color: #999999a3;
 }
 
 .table-wrapper {
@@ -63,7 +63,7 @@ h1 {
 }
 
 thead {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1E3A57 0%, #1E3A57 100%);
   color: white;
 }
 
@@ -89,24 +89,94 @@ td {
 }
 
 .btn-select {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
+  outline: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1e3a57;
+  min-width: 180px;
+  border: 0;
+  border-radius: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+  box-sizing: border-box;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 11px;
   font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  overflow: visible;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.btn-select::before {
+  content: '';
+  position: absolute;
+  inset: -2.5px;
+  border-radius: 40px;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 0%,
+    #075f8e 80%,
+    #0e6eaa 90%,
+    transparent 100%
+  );
+  animation: borderRotate 2s linear infinite;
+  z-index: -1;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  padding: 3px;
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes borderRotate {
+  0% {
+    --angle: 0deg;
+  }
+  100% {
+    --angle: 360deg;
+  }
 }
 
 .btn-select:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  opacity: .95;
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .18);
 }
 
 .btn-select:active {
-  transform: translateY(0);
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.bgContainer {
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.arrowContainer {
+  pointer-events: none;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+}
+
+.arrowContainer svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* Loading State */

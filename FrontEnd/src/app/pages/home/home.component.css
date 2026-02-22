@@ -11,6 +11,14 @@
   text-align: center;
   max-width: 600px;
   animation: slideUp 0.8s ease;
+  margin-top: -25%;
+}
+
+.logo {
+  width: min(580px, 60vw);
+  height: auto;
+  margin: 0 auto 0px auto;
+  display: block;
 }
 
 @keyframes slideUp {
@@ -28,47 +36,95 @@ h1 {
   font-size: 3.5rem;
   font-weight: 700;
   margin-bottom: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1E3A57 0%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  margin-top: -25%;
 }
 
 .subtitle {
   font-size: 1.5rem;
-  color: #666;
+  color: #696767;
   margin-bottom: 20px;
   font-weight: 500;
+  
 }
 
 .description {
   font-size: 1rem;
-  color: #999;
+  color: #9999997b;
   line-height: 1.6;
   margin-bottom: 40px;
+  margin-top: -3.5%;
 }
 
 .btn-empezar {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 16px 40px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 50px;
-  cursor: pointer;
+  outline: 0;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  justify-content: space-between;
+  background: #1e3a57;
+  min-width: 200px;
+  border: 0;
+  border-radius: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+  box-sizing: border-box;
+  padding: 16px 20px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  overflow: visible;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.btn-empezar::before {
+  content: '';
+  position: absolute;
+  inset: -2.5px;
+  border-radius: 40px;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 0%,
+    #075f8e 80%,
+    #0e6eaa 90%,
+    transparent 100%
+  );
+  animation: borderRotate 2s linear infinite;
+  z-index: -1;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  padding: 3px;
+}
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes borderRotate {
+  0% {
+    --angle: 0deg;
+  }
+  100% {
+    --angle: 360deg;
+  }
 }
 
 .btn-empezar:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+  opacity: .95;
+  transform: scale(1.10);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .18);
 }
 
 .btn-empezar:active {
-  transform: translateY(-1px);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }

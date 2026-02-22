@@ -1,4 +1,4 @@
-<div class="bubble-container">
+<div class="bubble-container" #bubbleContainer>
     <div *ngFor="let bubble of bubbles" class="bubble" [ngClass]="{ 'animate': animationTrigger }"
         [ngStyle]="getBubbleStyle(bubble)">
     </div>

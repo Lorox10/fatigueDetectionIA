@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, Optional } from '@angular/core';
 import { Router } from '@angular/router';
+import { MainLayoutComponent } from '../../shared/layout/main-layout/main-layout.component';
 
 @Component({
   selector: 'app-home',
@@ -9,18 +10,18 @@ import { Router } from '@angular/router';
   styleUrl: './home.component.css'
 })
 export class HomeComponent {
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    @Optional() private mainLayout: MainLayoutComponent
+  ) {}
 
   onEmpezar() {
-    // Aquí disparamos la animación a través del layout
-    const mainLayout = document.querySelector('app-main-layout') as any;
-    if (mainLayout && mainLayout.componentInstance) {
-      mainLayout.componentInstance.triggerAnimation();
+    // Activar animación de burbujas
+    if (this.mainLayout) {
+      this.mainLayout.triggerAnimation();
     }
     
-    // Navegamos después de un pequeño delay
-    setTimeout(() => {
-      this.router.navigate(['/conductores']);
-    }, 800);
+    // Navegar inmediatamente para mejor UX
+    this.router.navigate(['/conductores']);
   }
 }
