@@ -202,7 +202,7 @@ ng serve --open
 **Lorenzo Vargas Sala**
 https://github.com/Lorox10
 
-**Juan Camilo Fernandez Londoño
+**Juan Camilo Fernandez Londoño**
 https://github.com/JuanDevFL
 
 ---
