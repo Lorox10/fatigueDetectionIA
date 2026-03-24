@@ -23,10 +23,30 @@ export class FaceDetectionService {
   private faceLandmarksDetection: FaceLandmarksModule | null = null;
   private isModelLoaded = false;
 
-  // Umbrales para detección
-  private readonly EYE_ASPECT_RATIO_THRESHOLD = 0.21; // Umbral para ojos cerrados
-  private readonly MOUTH_ASPECT_RATIO_THRESHOLD = 0.6; // Umbral para bostezo
+  // Umbrales adaptativos y robustos para detección profesional
+  private readonly BASE_EYE_ASPECT_RATIO_THRESHOLD = 0.23; // Umbral base para ojos cerrados
+  private readonly BASE_MOUTH_ASPECT_RATIO_THRESHOLD = 0.7; // Umbral base para bostezo
   private readonly HEAD_TILT_THRESHOLD = 20; // Grados de inclinación
+
+  // Ajuste dinámico para tolerar diferencias de ojos/cámara
+  private eyeOpenAvg: number = 0.28; // Valor típico de ojos abiertos (se puede calibrar)
+  private eyeClosedAvg: number = 0.18; // Valor típico de ojos cerrados (se puede calibrar)
+  private calibrationCount: number = 0;
+  private readonly CALIBRATION_FRAMES = 30;
+
+  // Estado para transición y duración
+  private lastEyesClosed = false;
+  private eyesClosedStart: number | null = null;
+  private lastMouthOpen = false;
+  private mouthOpenStart: number | null = null;
+
+  // Permite calibrar automáticamente el EAR/MAR para cada usuario/cámara
+  calibrateEAR(currentEAR: number) {
+    if (this.calibrationCount < this.CALIBRATION_FRAMES) {
+      this.eyeOpenAvg = ((this.eyeOpenAvg * this.calibrationCount) + currentEAR) / (this.calibrationCount + 1);
+      this.calibrationCount++;
+    }
+  }
 
   constructor() {}
 
@@ -100,15 +120,54 @@ export class FaceDetectionService {
       const rightEyeRatio = this.calculateEyeAspectRatio(keypoints, 'right');
       const avgEyeRatio = (leftEyeRatio + rightEyeRatio) / 2;
 
+      // Calibrar EAR en los primeros frames (ojos abiertos)
+      this.calibrateEAR(avgEyeRatio);
+
       // Calcular Mouth Aspect Ratio (MAR) para detectar bostezos
       const mouthRatio = this.calculateMouthAspectRatio(keypoints);
 
       // Calcular inclinación de cabeza
       const headPose = this.calculateHeadPose(keypoints);
 
-      // Determinar estados
-      const eyesClosed = avgEyeRatio < this.EYE_ASPECT_RATIO_THRESHOLD;
-      const yawning = mouthRatio > this.MOUTH_ASPECT_RATIO_THRESHOLD;
+      // Umbral adaptativo para ojos cerrados (EAR)
+      const dynamicEARThreshold = Math.max(this.BASE_EYE_ASPECT_RATIO_THRESHOLD, this.eyeOpenAvg * 0.75);
+      // Umbral adaptativo para bostezo (MAR)
+      const dynamicMARThreshold = this.BASE_MOUTH_ASPECT_RATIO_THRESHOLD;
+
+      // --- Detección robusta de parpadeo (transición y duración) ---
+      let eyesClosed = false;
+      const now = Date.now();
+      if (avgEyeRatio < dynamicEARThreshold) {
+        if (!this.lastEyesClosed) {
+          this.eyesClosedStart = now;
+        }
+        // Ojos cerrados al menos 80ms (evita falsos positivos)
+        if (this.eyesClosedStart && (now - this.eyesClosedStart > 80)) {
+          eyesClosed = true;
+        }
+        this.lastEyesClosed = true;
+      } else {
+        this.eyesClosedStart = null;
+        this.lastEyesClosed = false;
+      }
+
+      // --- Detección robusta de bostezo (transición y duración) ---
+      let yawning = false;
+      if (mouthRatio > dynamicMARThreshold) {
+        if (!this.lastMouthOpen) {
+          this.mouthOpenStart = now;
+        }
+        // Boca abierta al menos 400ms (evita falsos positivos)
+        if (this.mouthOpenStart && (now - this.mouthOpenStart > 400)) {
+          yawning = true;
+        }
+        this.lastMouthOpen = true;
+      } else {
+        this.mouthOpenStart = null;
+        this.lastMouthOpen = false;
+      }
+
+      // --- Detección de inclinación de cabeza ---
       const headTilted = 
         Math.abs(headPose.roll) > this.HEAD_TILT_THRESHOLD ||
         Math.abs(headPose.pitch) > this.HEAD_TILT_THRESHOLD;

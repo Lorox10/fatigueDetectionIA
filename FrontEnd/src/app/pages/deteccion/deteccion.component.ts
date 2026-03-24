@@ -3,7 +3,6 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FaceDetectionService, FaceDetectionResult } from '../../services/face-detection.service';
-import { BubbleBackgroundComponent } from '../../shared/components/bubble-background/bubble-background.component';
 
 type EventType = 'parpadeo' | 'bostezo' | 'microsueño' | 'inclinación' | 'alerta';
 type EventSeverity = 'bajo' | 'medio' | 'alto' | 'crítico';
@@ -16,7 +15,7 @@ interface CameraDevice {
 @Component({
   selector: 'app-deteccion',
   standalone: true,
-  imports: [CommonModule, FormsModule, BubbleBackgroundComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './deteccion.component.html',
   styleUrl: './deteccion.component.css'
 })
@@ -42,7 +41,8 @@ export class DeteccionComponent implements OnInit, OnDestroy {
   
 
   // Estado de ojos cerrados para microsueños
-  eyesClosedStartTime: number | null = null;
+  eyesClosedStartTime: number | null = null; // Para microsueño
+  microsleepEyesClosedStart: number | null = null; // Independiente para microsueño
   eyesClosedThreshold: number = 3000; // 3 segundos
   lastBlinkTime: number = 0;
   blinkCooldown: number = 300; // Cooldown de 300ms entre parpadeos
@@ -56,6 +56,11 @@ export class DeteccionComponent implements OnInit, OnDestroy {
   totalYawns: number = 0;
   totalMicrosleeps: number = 0;
   totalHeadTilts: number = 0;
+
+
+  // Estado interno para lógica de transición y suavizado
+  prevEyesClosed: boolean = false;
+  prevKeypoints: Array<{ x: number; y: number }> | null = null;
 
   // Estado del modelo
   modelLoaded: boolean = false;
@@ -208,6 +213,7 @@ export class DeteccionComponent implements OnInit, OnDestroy {
       this.detectionInterval = null;
     }
     this.eyesClosedStartTime = null;
+    this.clearCanvas(); // Limpiar marcación facial al detener
     this.addEvent('alerta', 'Detección detenida', 'bajo');
   }
 
@@ -235,14 +241,17 @@ export class DeteccionComponent implements OnInit, OnDestroy {
 
       this.drawFaceOverlay(result.keypoints);
 
-      // Detectar parpadeos (transición de ojos abiertos a cerrados)
-      if (result.eyesClosed) {
+      // Detectar parpadeos SOLO en transición cerrado->abierto (no mientras están cerrados)
+      if (typeof this.prevEyesClosed === 'undefined') this.prevEyesClosed = false;
+      if (this.prevEyesClosed && !result.eyesClosed) {
+        // Solo cuenta cuando pasa de cerrado a abierto
         const now = Date.now();
         if (now - this.lastBlinkTime > this.blinkCooldown) {
           this.detectBlink();
           this.lastBlinkTime = now;
         }
       }
+      this.prevEyesClosed = result.eyesClosed;
 
       // Detectar bostezos
       if (result.yawning) {
@@ -285,22 +294,23 @@ export class DeteccionComponent implements OnInit, OnDestroy {
     this.addEvent('inclinación', 'Inclinación excesiva de cabeza detectada', 'alto');
   }
 
+  microsleepDetected: boolean = false;
   checkForMicrosleep(eyesClosed: boolean) {
     if (eyesClosed) {
-      if (this.eyesClosedStartTime === null) {
-        this.eyesClosedStartTime = Date.now();
+      if (this.microsleepEyesClosedStart === null) {
+        this.microsleepEyesClosedStart = Date.now();
+        this.microsleepDetected = false;
       } else {
-        const duration = Date.now() - this.eyesClosedStartTime;
-        if (duration >= this.eyesClosedThreshold) {
-          // Solo registrar una vez cuando se alcanza el umbral
-          if (duration < this.eyesClosedThreshold + 200) { // Ventana de 200ms
-            this.totalMicrosleeps++;
-            this.addEvent('microsueño', `¡ALERTA! Microsueño detectado (${(duration / 1000).toFixed(1)}s)`, 'crítico');
-          }
+        const duration = Date.now() - this.microsleepEyesClosedStart;
+        if (!this.microsleepDetected && duration >= this.eyesClosedThreshold) {
+          this.totalMicrosleeps++;
+          this.addEvent('microsueño', `¡ALERTA! Microsueño detectado (${(duration / 1000).toFixed(1)}s)`, 'crítico');
+          this.microsleepDetected = true;
         }
       }
     } else {
-      this.eyesClosedStartTime = null;
+      this.microsleepEyesClosedStart = null;
+      this.microsleepDetected = false;
     }
   }
 
@@ -375,58 +385,77 @@ export class DeteccionComponent implements OnInit, OnDestroy {
   }
 
   private drawFaceOverlay(keypoints: Array<{ x: number; y: number }>) {
-    if (!this.isBrowser) {
-      return;
-    }
-
+    if (!this.isBrowser) return;
     const canvas = this.canvasElement?.nativeElement;
-    if (!canvas || keypoints.length === 0) {
-      return;
-    }
-
-    if (canvas.width === 0 || canvas.height === 0) {
-      this.syncCanvasWithVideo();
-    }
-
+    if (!canvas || keypoints.length === 0) return;
+    if (canvas.width === 0 || canvas.height === 0) this.syncCanvasWithVideo();
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return;
-    }
-
+    if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
 
-    // Dibujar puntos faciales
+    // --- Suavizado de puntos (media móvil simple) ---
+    if (!this.prevKeypoints) this.prevKeypoints = keypoints;
+    const smoothKeypoints = keypoints.map((p, i) => {
+      const prev = (this.prevKeypoints && this.prevKeypoints[i]) ? this.prevKeypoints[i] : p;
+      return {
+        x: prev.x * 0.5 + p.x * 0.5,
+        y: prev.y * 0.5 + p.y * 0.5
+      };
+    });
+    this.prevKeypoints = smoothKeypoints;
+
+    // --- Validación de rostro frontal (opcional: solo marcar si roll/pitch moderados) ---
+    // (esto se puede mejorar aún más con headPose)
+
+    // --- Dibujar puntos faciales ---
     ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
-    for (const point of keypoints) {
+    for (const point of smoothKeypoints) {
       ctx.beginPath();
       ctx.arc(point.x, point.y, 1.4, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Dibujar contorno de la cara (face oval)
+    // --- Dibujar contorno de la cara (face oval) ---
     const faceOvalIndices = [
       10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
       397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
       172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
     ];
-
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.9)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     faceOvalIndices.forEach((index, i) => {
-      const point = keypoints[index];
-      if (!point) {
-        return;
-      }
-      if (i === 0) {
-        ctx.moveTo(point.x, point.y);
-      } else {
-        ctx.lineTo(point.x, point.y);
-      }
+      const point = smoothKeypoints[index];
+      if (!point) return;
+      if (i === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
     });
     ctx.closePath();
     ctx.stroke();
+
+    // --- Dibujar líneas de ojos, boca y cejas para mayor claridad ---
+    const drawLine = (indices: number[], color: string) => {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      indices.forEach((idx, i) => {
+        const pt = smoothKeypoints[idx];
+        if (!pt) return;
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      });
+      ctx.stroke();
+    };
+    // Ojo izquierdo
+    drawLine([33, 160, 158, 133, 153, 144, 33], 'rgba(0,200,0,0.8)');
+    // Ojo derecho
+    drawLine([362, 385, 387, 263, 373, 380, 362], 'rgba(0,200,0,0.8)');
+    // Boca
+    drawLine([78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78], 'rgba(255,140,0,0.8)');
+    // Cejas
+    drawLine([70, 63, 105, 66, 107, 55, 65, 52, 53, 46, 124, 35, 124], 'rgba(0,0,255,0.7)');
+    drawLine([336, 296, 334, 293, 300, 276, 283, 282, 295, 285, 417, 285], 'rgba(0,0,255,0.7)');
 
     ctx.restore();
   }
