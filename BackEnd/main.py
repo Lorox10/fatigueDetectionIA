@@ -2,17 +2,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+from contextlib import asynccontextmanager
 from init_db import crear_base_datos
-from app.routers import conductores
+from app.routers import conductores, sesiones, telemetria
 
 # Cargar variables de entorno
 load_dotenv()
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    crear_base_datos(drop_existing=False)
+    yield
+
 
 # Crear aplicación FastAPI
 app = FastAPI(
     title="Detección de Fatiga en Conductores",
     description="API para detectar fatiga en conductores mediante análisis facial",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Configurar CORS
@@ -33,10 +41,8 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(conductores.router)
-
-@app.on_event("startup")
-def startup_init_db():
-    crear_base_datos(drop_existing=False)
+app.include_router(sesiones.router)
+app.include_router(telemetria.router)
 
 # Rutas básicas
 @app.get("/")

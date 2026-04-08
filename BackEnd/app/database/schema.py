@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS telemetria (
     sesion_id INT NOT NULL,
     conductor_id INT NOT NULL,
     timestamp DATETIME NOT NULL,
+    tipo_evento VARCHAR(50),
+    severidad VARCHAR(20),
     parpadeos_por_minuto FLOAT,
     apertura_ojos FLOAT,
     movimiento_cabeza FLOAT,

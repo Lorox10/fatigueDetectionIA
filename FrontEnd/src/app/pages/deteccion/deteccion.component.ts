@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, Inject, PLATFORM_ID } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { CommonModule, Location, isPlatformBrowser } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 import { FaceDetectionService, FaceDetectionResult } from '../../services/face-detection.service';
+import { BackendApiService, EstadisticasSesion } from '../../services/backend-api.service';
 
 type EventType = 'parpadeo' | 'bostezo' | 'microsueño' | 'inclinación' | 'alerta';
 type EventSeverity = 'bajo' | 'medio' | 'alto' | 'crítico';
@@ -15,7 +17,7 @@ interface CameraDevice {
 @Component({
   selector: 'app-deteccion',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './deteccion.component.html',
   styleUrl: './deteccion.component.css'
 })
@@ -24,8 +26,15 @@ export class DeteccionComponent implements OnInit, OnDestroy {
   @ViewChild('canvasElement') canvasElement!: ElementRef<HTMLCanvasElement>;
 
   // Datos del conductor
+  conductorId: number = 0;
   conductorNombre: string = '';
   conductorApellidos: string = '';
+  sesionId: number | null = null;
+  sesionActiva: boolean = false;
+
+  // Estadísticas de sesión
+  estadisticasSesion: EstadisticasSesion | null = null;
+  alertaDescanso: string | null = null;
 
   // Cámaras disponibles
   availableCameras: CameraDevice[] = [];
@@ -69,7 +78,10 @@ export class DeteccionComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
+    private location: Location,
     private faceDetectionService: FaceDetectionService,
+    private backendApi: BackendApiService,
     @Inject(PLATFORM_ID) private platformId: object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
@@ -78,6 +90,7 @@ export class DeteccionComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     // Obtener datos del conductor de los query params
     this.route.queryParams.subscribe(params => {
+      this.conductorId = parseInt(params['id']) || 0;
       this.conductorNombre = params['nombre'] || 'Conductor';
       this.conductorApellidos = params['apellidos'] || '';
     });
@@ -186,7 +199,7 @@ export class DeteccionComponent implements OnInit, OnDestroy {
     }
   }
 
-  startDetection() {
+  async startDetection() {
     if (!this.cameraActive) {
       this.addEvent('alerta', 'Primero debes iniciar la cámara', 'medio');
       return;
@@ -195,6 +208,26 @@ export class DeteccionComponent implements OnInit, OnDestroy {
     if (!this.modelLoaded) {
       this.addEvent('alerta', 'El modelo de IA aún no está cargado', 'medio');
       return;
+    }
+
+    // Crear sesión en el backend
+    if (!this.sesionId) {
+      try {
+        this.backendApi.crearSesion(this.conductorId).subscribe(
+          (response) => {
+            this.sesionId = response.sesion_id;
+            this.sesionActiva = true;
+            this.addEvent('alerta', 'Sesión de monitoreo iniciada - Guardando datos', 'bajo');
+            console.log('Sesión creada:', this.sesionId);
+          },
+          (error) => {
+            console.error('Error al crear sesión:', error);
+            this.addEvent('alerta', 'Error al conectar con el servidor', 'alto');
+          }
+        );
+      } catch (error) {
+        console.error('Error:', error);
+      }
     }
 
     this.detectionActive = true;
@@ -214,7 +247,74 @@ export class DeteccionComponent implements OnInit, OnDestroy {
     }
     this.eyesClosedStartTime = null;
     this.clearCanvas(); // Limpiar marcación facial al detener
+    
+    // Finalizar sesión automáticamente
+    if (this.sesionId && this.sesionActiva) {
+      this.finalizarSesion();
+    }
+    
     this.addEvent('alerta', 'Detección detenida', 'bajo');
+  }
+
+  private finalizarSesion() {
+    if (!this.sesionId) return;
+
+    const datos = {
+      duracion_minutos: 0, // Puede ser calculado por el backend
+      estado: 'finalizado'
+    };
+
+    this.backendApi.finalizarSesion(this.sesionId, datos).subscribe(
+      (response) => {
+        console.log('Sesión finalizada:', response);
+        this.sesionActiva = false;
+        
+        // Obtener estadísticas finales
+        this.obtenerEstadisticas();
+      },
+      (error) => {
+        console.error('Error al finalizar sesión:', error);
+      }
+    );
+  }
+
+  private guardarEvento(tipo_evento: string, severidad: string) {
+    if (!this.sesionId || !this.sesionActiva) return;
+
+    const telemetria = {
+      sesion_id: this.sesionId,
+      conductor_id: this.conductorId,
+      tipo_evento: tipo_evento,
+      severidad: severidad,
+      datos_adicionales: {
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    this.backendApi.guardarTelemetria(telemetria).subscribe(
+      (response) => {
+        // Silenciosamente guardado
+        console.log('Evento guardado:', tipo_evento);
+      },
+      (error) => {
+        console.error('Error al guardar evento:', error);
+      }
+    );
+  }
+
+  private obtenerEstadisticas() {
+    if (!this.sesionId) return;
+
+    this.backendApi.obtenerEstadisticasSesion(this.sesionId).subscribe(
+      (stats) => {
+        this.estadisticasSesion = stats;
+        console.log('Estadísticas:', stats);
+        this.addEvent('alerta', `Sesión finalizada. ${stats.recomendacion}`, 'bajo');
+      },
+      (error) => {
+        console.error('Error al obtener estadísticas:', error);
+      }
+    );
   }
 
   async performDetection() {
@@ -282,16 +382,22 @@ export class DeteccionComponent implements OnInit, OnDestroy {
   detectBlink() {
     this.totalBlinks++;
     this.addEvent('parpadeo', 'Parpadeo detectado', 'bajo');
+    this.guardarEvento('parpadeo', 'bajo');
+    this.evaluarAlertaDescanso();
   }
 
   detectYawn() {
     this.totalYawns++;
     this.addEvent('bostezo', 'Bostezo detectado - Posible fatiga', 'medio');
+    this.guardarEvento('bostezo', 'medio');
+    this.evaluarAlertaDescanso();
   }
 
   detectHeadTilt() {
     this.totalHeadTilts++;
     this.addEvent('inclinación', 'Inclinación excesiva de cabeza detectada', 'alto');
+    this.guardarEvento('inclinación', 'alto');
+    this.evaluarAlertaDescanso();
   }
 
   microsleepDetected: boolean = false;
@@ -304,8 +410,11 @@ export class DeteccionComponent implements OnInit, OnDestroy {
         const duration = Date.now() - this.microsleepEyesClosedStart;
         if (!this.microsleepDetected && duration >= this.eyesClosedThreshold) {
           this.totalMicrosleeps++;
-          this.addEvent('microsueño', `¡ALERTA! Microsueño detectado (${(duration / 1000).toFixed(1)}s)`, 'crítico');
+          const mensaje = `¡ALERTA! Microsueño detectado (${(duration / 1000).toFixed(1)}s)`;
+          this.addEvent('microsueño', mensaje, 'crítico');
+          this.guardarEvento('microsueño', 'crítico');
           this.microsleepDetected = true;
+          this.evaluarAlertaDescanso();
         }
       }
     } else {
@@ -348,7 +457,41 @@ export class DeteccionComponent implements OnInit, OnDestroy {
     this.totalYawns = 0;
     this.totalMicrosleeps = 0;
     this.totalHeadTilts = 0;
+    this.alertaDescanso = null;
     this.addEvent('alerta', 'Contadores reiniciados', 'bajo');
+  }
+
+  private evaluarAlertaDescanso() {
+    if (this.totalMicrosleeps >= 1) {
+      this.alertaDescanso = 'ALERTA CRITICA: Microsueño detectado. El conductor debe descansar de inmediato.';
+      return;
+    }
+
+    if (this.totalYawns >= 5 || this.totalHeadTilts >= 8) {
+      this.alertaDescanso = 'ALERTA ALTA: Fatiga acumulada. Se recomienda una pausa en los proximos minutos.';
+      return;
+    }
+
+    if (this.totalYawns >= 3 || this.totalHeadTilts >= 5) {
+      this.alertaDescanso = 'ALERTA MEDIA: Signos de fatiga detectados. Mantener vigilancia activa.';
+      return;
+    }
+
+    this.alertaDescanso = null;
+  }
+
+  verHistorial() {
+    this.router.navigate(['/historial'], {
+      queryParams: {
+        id: this.conductorId,
+        nombre: this.conductorNombre,
+        apellidos: this.conductorApellidos
+      }
+    });
+  }
+
+  goBack() {
+    this.location.back();
   }
 
   private syncCanvasWithVideo() {

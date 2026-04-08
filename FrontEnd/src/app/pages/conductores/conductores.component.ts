@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { ConductoresService, Conductor } from '../../services/conductores.service';
 
@@ -17,7 +17,8 @@ export class ConductoresComponent implements OnInit {
 
   constructor(
     private conductoresService: ConductoresService,
-    private router: Router
+    private router: Router,
+    private location: Location
   ) {}
 
   ngOnInit() {
@@ -51,5 +52,9 @@ export class ConductoresComponent implements OnInit {
         id: conductor.id
       }
     });
+  }
+
+  goBack() {
+    this.location.back();
   }
 }

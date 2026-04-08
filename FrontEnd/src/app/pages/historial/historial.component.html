@@ -1,0 +1,239 @@
+<div class="historial-container">
+    <div class="content-wrapper">
+        <!-- Encabezado -->
+        <div class="header">
+            <div class="header-row">
+                <button class="btn-back" type="button" (click)="goBack()">← Volver atrás</button>
+                <h1 *ngIf="!seleccionandoConductor">📊 Historial de {{ conductorNombre }} {{ conductorApellidos }}</h1>
+                <h1 *ngIf="seleccionandoConductor">📊 Historial de Conductores</h1>
+                <span class="header-spacer" aria-hidden="true"></span>
+            </div>
+            <p class="subtitle" *ngIf="!seleccionandoConductor">Revisión de todas las sesiones de monitoreo</p>
+            <p class="subtitle" *ngIf="seleccionandoConductor">Selecciona un conductor para ver sus estadísticas</p>
+        </div>
+
+        <!-- Selector de conductores -->
+        <div class="seleccion-conductor" *ngIf="seleccionandoConductor && !loading">
+            <h2>Selecciona un conductor</h2>
+            <div class="conductores-grid" *ngIf="conductores.length > 0">
+                <button class="conductor-card" *ngFor="let conductor of conductores"
+                    (click)="seleccionarConductor(conductor)">
+                    <div class="conductor-nombre">{{ conductor.nombre }} {{ conductor.apellidos }}</div>
+                    <div class="conductor-email">{{ conductor.email }}</div>
+                    <div class="conductor-licencia">Licencia: {{ conductor.numero_licencia || conductor.licencia ||
+                        'N/A' }}
+                    </div>
+                </button>
+            </div>
+            <div class="no-data" *ngIf="conductores.length === 0">
+                <div class="no-data-icon">📭</div>
+                <p>No hay conductores registrados</p>
+            </div>
+        </div>
+
+        <div class="acciones-historial" *ngIf="!seleccionandoConductor">
+            <button class="btn-ver-estadisticas" (click)="volverASeleccionarConductor()">Cambiar conductor</button>
+        </div>
+
+        <!-- Resumen Global con Gráfica -->
+        <div class="resumen-global-section" *ngIf="!seleccionandoConductor && resumenGlobal">
+            <div class="resumen-cards">
+                <div class="stat-card">
+                    <div class="stat-icon">🚗</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total de Viajes</div>
+                        <div class="stat-value">{{ resumenGlobal.total_sesiones }}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">👁️</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Parpadeos</div>
+                        <div class="stat-value">{{ resumenStats.parpadeos }}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">🥱</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Bostezos</div>
+                        <div class="stat-value">{{ resumenStats.bostezos }}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">😴</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Total Microsueños</div>
+                        <div class="stat-value" [style.color]="resumenStats.microsuenos > 0 ? '#ff6b6b' : '#2ecc71'">
+                            {{ resumenStats.microsuenos }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">🔄</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Inclinaciones</div>
+                        <div class="stat-value">{{ resumenStats.inclinaciones }}</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⚠️</div>
+                    <div class="stat-content">
+                        <div class="stat-label">Eventos Críticos</div>
+                        <div class="stat-value"
+                            [style.color]="resumenStats.eventos_criticos > 0 ? '#ff4444' : '#2ecc71'">
+                            {{ resumenStats.eventos_criticos }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráfico Global -->
+            <div class="grafico-contenedor">
+                <h3>Distribución de Eventos</h3>
+                <canvas id="chartGlobal" class="chart-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Mensaje de carga o error -->
+        <div *ngIf="loading" class="loading">
+            <div class="spinner"></div>
+            <p>{{ seleccionandoConductor ? 'Cargando conductores...' : 'Cargando historial...' }}</p>
+        </div>
+
+        <div *ngIf="error" class="error-message">
+            {{ error }}
+        </div>
+
+        <!-- Lista de sesiones -->
+        <div *ngIf="!seleccionandoConductor && !loading && sesiones.length > 0" class="sesiones-list">
+            <h2>📅 Sesiones de Monitoreo</h2>
+
+            <div *ngFor="let sesion of sesiones; let i = index" class="sesion-item">
+                <div class="sesion-header" (click)="selectSesion(sesion.id)">
+                    <div class="sesion-numero">
+                        <span class="badge">Viaje {{ i + 1 }}</span>
+                    </div>
+
+                    <div class="sesion-info">
+                        <div class="fecha">📍 {{ formatearFecha(sesion.fecha_inicio) }}</div>
+                        <div class="duracion">⏱️ {{ calcularDuracion(sesion.fecha_inicio, sesion.fecha_fin) }}</div>
+                    </div>
+
+                    <div class="sesion-status" *ngIf="sesion.estadisticas">
+                        <span [style.background-color]="obtenerColorFatiga(sesion.estadisticas.nivel_fatiga_promedio)"
+                            class="nivel-fatiga">
+                            Nivel: {{ sesion.estadisticas.nivel_fatiga_promedio }}/10
+                        </span>
+                    </div>
+
+                    <button class="btn-ver-estadisticas" (click)="toggleSesionDesdeBoton($event, sesion.id)">
+                        {{ selectedSesionId === sesion.id ? 'Ocultar estadísticas' : 'Ver estadísticas' }}
+                    </button>
+
+                    <div class="expand-icon" [class.expanded]="selectedSesionId === sesion.id">
+                        ▼
+                    </div>
+                </div>
+
+                <!-- Detalles expandibles -->
+                <div class="sesion-details" *ngIf="selectedSesionId === sesion.id && sesion.estadisticas">
+                    <div class="stats-grid">
+                        <div class="detail-card">
+                            <div class="detail-icon">👁️</div>
+                            <div class="detail-content">
+                                <div class="detail-label">Parpadeos</div>
+                                <div class="detail-value">{{ sesion.estadisticas.total_parpadeos }}</div>
+                                <div class="detail-sub">{{ sesion.estadisticas.parpadeos_por_minuto }}/min</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-card">
+                            <div class="detail-icon">🥱</div>
+                            <div class="detail-content">
+                                <div class="detail-label">Bostezos</div>
+                                <div class="detail-value">{{ sesion.estadisticas.total_bostezos }}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-card">
+                            <div class="detail-icon">😴</div>
+                            <div class="detail-content">
+                                <div class="detail-label">Microsueños</div>
+                                <div class="detail-value"
+                                    [style.color]="sesion.estadisticas.total_microsuenos > 0 ? '#ff6b6b' : '#2ecc71'">
+                                    {{ sesion.estadisticas.total_microsuenos }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-card">
+                            <div class="detail-icon">🔄</div>
+                            <div class="detail-content">
+                                <div class="detail-label">Inclinaciones</div>
+                                <div class="detail-value">{{ sesion.estadisticas.total_inclinaciones }}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-card">
+                            <div class="detail-icon">⚠️</div>
+                            <div class="detail-content">
+                                <div class="detail-label">Críticos</div>
+                                <div class="detail-value">{{ sesion.estadisticas.eventos_criticos }}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-card">
+                            <div class="detail-icon">📊</div>
+                            <div class="detail-content">
+                                <div class="detail-label">Nivel Fatiga</div>
+                                <div class="detail-value">{{ sesion.estadisticas.nivel_fatiga_promedio }}/10</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos de Sesión -->
+                    <div class="graficos-sesion">
+                        <div class="grafico-contenedor">
+                            <h4>Eventos por Tipo</h4>
+                            <canvas [id]="'chart-bars-' + sesion.id" class="chart-canvas"></canvas>
+                        </div>
+                        <div class="grafico-contenedor">
+                            <h4>Progresión de Fatiga</h4>
+                            <canvas [id]="'chart-line-' + sesion.id" class="chart-canvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recomendación -->
+                    <div class="recomendacion"
+                        [ngClass]="'severity-' + sesion.estadisticas.recomendacion.charAt(0).toLowerCase()">
+                        {{ sesion.estadisticas.recomendacion }}
+                    </div>
+
+                    <!-- Barra de progreso de fatiga -->
+                    <div class="fatiga-progress">
+                        <div class="progress-label">Progresión de Fatiga</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill"
+                                [style.width]="(sesion.estadisticas.nivel_fatiga_promedio / 10) * 100 + '%'"
+                                [style.background-color]="obtenerColorFatiga(sesion.estadisticas.nivel_fatiga_promedio)">
+                            </div>
+                        </div>
+                        <div class="progress-text">{{ sesion.estadisticas.nivel_fatiga_promedio }}% de fatiga máxima
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sin sesiones -->
+        <div *ngIf="!seleccionandoConductor && !loading && sesiones.length === 0" class="no-data">
+            <div class="no-data-icon">📭</div>
+            <p>No hay sesiones de monitoreo para este conductor</p>
+        </div>
+    </div>
+</div>

@@ -1,128 +1,212 @@
 <!-- Bubble background removed -->
 
 <div class="deteccion-container">
-    <!-- Header con nombre del conductor -->
-    <div class="header">
-        <div class="conductor-info">
-            <h1>Detección de Fatiga en Tiempo Real</h1>
-            <p class="conductor-name">
-                <span class="label">Conductor:</span>
-                <span class="name">{{ conductorNombre }} {{ conductorApellidos }}</span>
-            </p>
+    <div class="content-wrapper">
+        <!-- Header con nombre del conductor -->
+        <div class="header">
+            <div class="header-row">
+                <button class="btn-back" type="button" (click)="goBack()">← Volver atrás</button>
+                <h1>Detección de Fatiga en Tiempo Real</h1>
+                <span class="header-spacer" aria-hidden="true"></span>
+            </div>
+            <div class="conductor-info">
+                <p class="conductor-name">
+                    <span class="label">Conductor:</span>
+                    <span class="name">{{ conductorNombre }} {{ conductorApellidos }}</span>
+                </p>
+            </div>
         </div>
-    </div>
 
-    <div class="main-content">
-        <!-- Panel de cámara y controles -->
-        <div class="camera-panel">
-            <div class="camera-controls">
-                <h2>Configuración de Cámara</h2>
+        <div class="main-content">
+            <!-- Panel de cámara y controles -->
+            <div class="camera-panel">
+                <div class="camera-controls">
+                    <h2>Configuración de Cámara</h2>
 
-                <div class="model-status" *ngIf="modelLoading">
-                    <span class="loading-icon">⏳</span>
-                    <span>Cargando modelo de IA...</span>
+                    <div class="model-status" *ngIf="modelLoading">
+                        <span class="loading-icon">⏳</span>
+                        <span>Cargando modelo de IA...</span>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="cameraSelect">Seleccionar Cámara:</label>
+                        <select id="cameraSelect" [(ngModel)]="selectedCameraId" (change)="onCameraChange()"
+                            [disabled]="detectionActive || modelLoading">
+                            <option *ngFor="let camera of availableCameras" [value]="camera.deviceId">
+                                {{ camera.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-control btn-start" (click)="startCamera()"
+                            [disabled]="cameraActive || modelLoading">
+                            <span>📹</span>
+                            Iniciar Cámara
+                        </button>
+                        <button class="btn-control btn-stop" (click)="stopCamera()"
+                            [disabled]="!cameraActive || detectionActive">
+                            <span>⏹️</span>
+                            Detener Cámara
+                        </button>
+                    </div>
+
+                    <div class="detection-controls">
+                        <button *ngIf="!detectionActive" class="btn-detection btn-start-detection"
+                            (click)="startDetection()" [disabled]="!cameraActive || !modelLoaded || modelLoading">
+                            <span>🚀</span>
+                            Iniciar Detección
+                        </button>
+                        <button *ngIf="detectionActive" class="btn-detection btn-stop-detection"
+                            (click)="stopDetection()">
+                            <span>⏸️</span>
+                            Detener Detección
+                        </button>
+                    </div>
+
+                    <div class="status-indicator" [class.active]="detectionActive">
+                        <span class="status-dot"></span>
+                        <span class="status-text">
+                            {{ detectionActive ? 'Detección Activa' : 'Detección Inactiva' }}
+                        </span>
+                    </div>
+
+                    <div class="alerta-descanso" *ngIf="alertaDescanso">
+                        ⚠️ {{ alertaDescanso }}
+                    </div>
                 </div>
 
-                <div class="control-group">
-                    <label for="cameraSelect">Seleccionar Cámara:</label>
-                    <select id="cameraSelect" [(ngModel)]="selectedCameraId" (change)="onCameraChange()"
-                        [disabled]="detectionActive || modelLoading">
-                        <option *ngFor="let camera of availableCameras" [value]="camera.deviceId">
-                            {{ camera.label }}
-                        </option>
-                    </select>
-                </div>
+                <div class="camera-row">
+                    <div class="summary-side summary-left">
+                        <div class="summary-side-header">
+                            <h3>Resumen Rapido</h3>
+                            <button class="btn-clear" (click)="clearEvents()">
+                                🗑️ Reiniciar
+                            </button>
+                        </div>
+                        <div class="summary-grid summary-grid-vertical">
+                            <div class="summary-item summary-microsleep">
+                                <span class="summary-icon">😴</span>
+                                <span class="summary-label">Microsuenos</span>
+                                <span class="summary-value">{{ totalMicrosleeps }}</span>
+                            </div>
+                            <div class="summary-item summary-blinks">
+                                <span class="summary-icon">👁️</span>
+                                <span class="summary-label">Parpadeos</span>
+                                <span class="summary-value">{{ totalBlinks }}</span>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="button-group">
-                    <button class="btn-control btn-start" (click)="startCamera()"
-                        [disabled]="cameraActive || modelLoading">
-                        <span>📹</span>
-                        Iniciar Cámara
-                    </button>
-                    <button class="btn-control btn-stop" (click)="stopCamera()"
-                        [disabled]="!cameraActive || detectionActive">
-                        <span>⏹️</span>
-                        Detener Cámara
-                    </button>
-                </div>
+                    <div class="camera-view">
+                        <div class="video-container" [class.active]="cameraActive">
+                            <video #videoElement autoplay playsinline [class.detecting]="detectionActive"></video>
+                            <canvas #canvasElement></canvas>
 
-                <div class="detection-controls">
-                    <button *ngIf="!detectionActive" class="btn-detection btn-start-detection"
-                        (click)="startDetection()" [disabled]="!cameraActive || !modelLoaded || modelLoading">
-                        <span>🚀</span>
-                        Iniciar Detección
-                    </button>
-                    <button *ngIf="detectionActive" class="btn-detection btn-stop-detection" (click)="stopDetection()">
-                        <span>⏸️</span>
-                        Detener Detección
-                    </button>
-                </div>
+                            <div class="overlay" *ngIf="!cameraActive">
+                                <div class="overlay-content">
+                                    <span class="camera-icon">📷</span>
+                                    <p>Selecciona una cámara y presiona "Iniciar Cámara"</p>
+                                </div>
+                            </div>
 
-                <div class="status-indicator" [class.active]="detectionActive">
-                    <span class="status-dot"></span>
-                    <span class="status-text">
-                        {{ detectionActive ? 'Detección Activa' : 'Detección Inactiva' }}
-                    </span>
+                            <div class="detection-overlay" *ngIf="detectionActive">
+                                <span class="recording-indicator">● REC</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-side summary-right">
+                        <div class="summary-side-header">
+                            <h3>Resumen Rapido</h3>
+                            <span class="summary-hint">Conteo total</span>
+                        </div>
+                        <div class="summary-grid summary-grid-vertical">
+                            <div class="summary-item summary-tilts">
+                                <span class="summary-icon">🔄</span>
+                                <span class="summary-label">Inclinaciones</span>
+                                <span class="summary-value">{{ totalHeadTilts }}</span>
+                            </div>
+                            <div class="summary-item summary-yawns">
+                                <span class="summary-icon">🥱</span>
+                                <span class="summary-label">Bostezos</span>
+                                <span class="summary-value">{{ totalYawns }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="camera-row">
-                <div class="summary-side summary-left">
-                    <div class="summary-side-header">
-                        <h3>Resumen Rapido</h3>
-                        <button class="btn-clear" (click)="clearEvents()">
-                            🗑️ Reiniciar
-                        </button>
-                    </div>
-                    <div class="summary-grid summary-grid-vertical">
-                        <div class="summary-item summary-microsleep">
-                            <span class="summary-icon">😴</span>
-                            <span class="summary-label">Microsuenos</span>
-                            <span class="summary-value">{{ totalMicrosleeps }}</span>
+            <!-- Estadísticas Finales (después de terminar sesión) -->
+            <div class="estadisticas-finales" *ngIf="estadisticasSesion && !detectionActive">
+                <h2>📊 Estadísticas de la Sesión</h2>
+
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <div class="stat-icon">👁️</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Parpadeos</div>
+                            <div class="stat-value">{{ estadisticasSesion.total_parpadeos }}</div>
+                            <div class="stat-detail">{{ estadisticasSesion.parpadeos_por_minuto }}/min</div>
                         </div>
-                        <div class="summary-item summary-blinks">
-                            <span class="summary-icon">👁️</span>
-                            <span class="summary-label">Parpadeos</span>
-                            <span class="summary-value">{{ totalBlinks }}</span>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-icon">🥱</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Bostezos</div>
+                            <div class="stat-value">{{ estadisticasSesion.total_bostezos }}</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box"
+                        [style.color]="estadisticasSesion.total_microsuenos > 0 ? '#ff4444' : '#2ecc71'">
+                        <div class="stat-icon">😴</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Microsueños</div>
+                            <div class="stat-value">{{ estadisticasSesion.total_microsuenos }}</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-icon">🔄</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Inclinaciones</div>
+                            <div class="stat-value">{{ estadisticasSesion.total_inclinaciones }}</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Nivel de Fatiga</div>
+                            <div class="stat-value">{{ estadisticasSesion.nivel_fatiga_promedio }}/10</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-box"
+                        [style.color]="estadisticasSesion.eventos_criticos > 0 ? '#ff4444' : '#2ecc71'">
+                        <div class="stat-icon">⚠️</div>
+                        <div class="stat-info">
+                            <div class="stat-label">Eventos Críticos</div>
+                            <div class="stat-value">{{ estadisticasSesion.eventos_criticos }}</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="camera-view">
-                    <div class="video-container" [class.active]="cameraActive">
-                        <video #videoElement autoplay playsinline [class.detecting]="detectionActive"></video>
-                        <canvas #canvasElement></canvas>
-
-                        <div class="overlay" *ngIf="!cameraActive">
-                            <div class="overlay-content">
-                                <span class="camera-icon">📷</span>
-                                <p>Selecciona una cámara y presiona "Iniciar Cámara"</p>
-                            </div>
-                        </div>
-
-                        <div class="detection-overlay" *ngIf="detectionActive">
-                            <span class="recording-indicator">● REC</span>
-                        </div>
-                    </div>
+                <!-- Recomendación -->
+                <div class="recomendacion-box">
+                    {{ estadisticasSesion.recomendacion }}
                 </div>
 
-                <div class="summary-side summary-right">
-                    <div class="summary-side-header">
-                        <h3>Resumen Rapido</h3>
-                        <span class="summary-hint">Conteo total</span>
-                    </div>
-                    <div class="summary-grid summary-grid-vertical">
-                        <div class="summary-item summary-tilts">
-                            <span class="summary-icon">🔄</span>
-                            <span class="summary-label">Inclinaciones</span>
-                            <span class="summary-value">{{ totalHeadTilts }}</span>
-                        </div>
-                        <div class="summary-item summary-yawns">
-                            <span class="summary-icon">🥱</span>
-                            <span class="summary-label">Bostezos</span>
-                            <span class="summary-value">{{ totalYawns }}</span>
-                        </div>
-                    </div>
+                <!-- Botones de acción -->
+                <div class="action-buttons">
+                    <button class="btn-action btn-historial" (click)="verHistorial()">
+                        📅 Ver Historial
+                    </button>
+                    <button class="btn-action btn-nueva-sesion" (click)="clearEvents()">
+                        🔄 Nueva Sesión
+                    </button>
                 </div>
             </div>
         </div>

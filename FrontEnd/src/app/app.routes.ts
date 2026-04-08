@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { HomeComponent } from './pages/home/home.component';
 import { ConductoresComponent } from './pages/conductores/conductores.component';
 import { DeteccionComponent } from './pages/deteccion/deteccion.component';
+import { HistorialComponent } from './pages/historial/historial.component';
 import { MainLayoutComponent } from './shared/layout/main-layout/main-layout.component';
 
 export const routes: Routes = [
@@ -11,7 +12,8 @@ export const routes: Routes = [
     children: [
       { path: '', component: HomeComponent },
       { path: 'conductores', component: ConductoresComponent },
-      { path: 'deteccion', component: DeteccionComponent }
+      { path: 'deteccion', component: DeteccionComponent },
+      { path: 'historial', component: HistorialComponent }
     ]
   }
 ];

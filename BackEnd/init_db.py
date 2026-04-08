@@ -49,6 +49,41 @@ def crear_base_datos(drop_existing: bool = False):
                     print(f"   [OK] Tabla {i} creada exitosamente")
                 except Error as e:
                     print(f"   [ERROR] Error en tabla {i}: {e}")
+
+            # Migraciones compatibles hacia atrás
+            print("5. Aplicando migraciones de compatibilidad...")
+
+            def existe_columna(nombre_columna: str) -> bool:
+                cursor.execute(
+                    """
+                    SELECT 1
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = %s
+                      AND TABLE_NAME = 'telemetria'
+                      AND COLUMN_NAME = %s
+                    LIMIT 1
+                    """,
+                    (settings.DB_NAME, nombre_columna),
+                )
+                return cursor.fetchone() is not None
+
+            try:
+                if not existe_columna("tipo_evento"):
+                    cursor.execute("ALTER TABLE telemetria ADD COLUMN tipo_evento VARCHAR(50)")
+                    print("   [OK] Columna telemetria.tipo_evento agregada")
+                else:
+                    print("   [OK] Columna telemetria.tipo_evento ya existe")
+            except Error as e:
+                print(f"   [WARN] No se pudo agregar telemetria.tipo_evento: {e}")
+
+            try:
+                if not existe_columna("severidad"):
+                    cursor.execute("ALTER TABLE telemetria ADD COLUMN severidad VARCHAR(20)")
+                    print("   [OK] Columna telemetria.severidad agregada")
+                else:
+                    print("   [OK] Columna telemetria.severidad ya existe")
+            except Error as e:
+                print(f"   [WARN] No se pudo agregar telemetria.severidad: {e}")
             
             connection.commit()
             cursor.close()

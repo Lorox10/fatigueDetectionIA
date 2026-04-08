@@ -1,59 +1,65 @@
 <div class="conductores-container">
-    <div class="header">
-        <h1>Selecciona un Conductor</h1>
-        <p>-Elige el conductor para iniciar la detección de fatiga-</p>
-    </div>
+    <div class="content-wrapper">
+        <div class="header">
+            <div class="header-row">
+                <button class="btn-back" type="button" (click)="goBack()">← Volver atrás</button>
+                <h1>Selecciona un Conductor</h1>
+                <span class="header-spacer" aria-hidden="true"></span>
+            </div>
+            <p>-Elige el conductor para iniciar la detección de fatiga-</p>
+        </div>
 
-    <!-- Loading -->
-    <div *ngIf="loading" class="loading">
-        <p>Cargando conductores...</p>
-    </div>
+        <!-- Loading -->
+        <div *ngIf="loading" class="loading">
+            <p>Cargando conductores...</p>
+        </div>
 
-    <!-- Error -->
-    <div *ngIf="error && !loading" class="error">
-        <p>⚠️ {{ error }}</p>
-    </div>
+        <!-- Error -->
+        <div *ngIf="error && !loading" class="error">
+            <p>⚠️ {{ error }}</p>
+        </div>
 
-    <!-- Table -->
-    <div *ngIf="!loading && !error && conductores.length > 0" class="table-wrapper">
-        <table class="conductores-table">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Apellidos</th>
-                    <th>Licencia</th>
-                    <th>Email</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let conductor of conductores" class="conductor-row">
-                    <td>{{ conductor.nombre }}</td>
-                    <td>{{ conductor.apellidos }}</td>
-                    <td>{{ conductor.numero_licencia || conductor.licencia }}</td>
-                    <td>{{ conductor.email }}</td>
-                    <td>
-                        <button class="btn-select" (click)="selectConductor(conductor)">
-                            <div class="bgContainer">
-                                <span>SELECCIONAR</span>
-                            </div>
-                            <div class="arrowContainer">
-                                <svg width="24" height="24" viewBox="0 0 45 38" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path
-                                        d="M43.7678 20.7678C44.7441 19.7915 44.7441 18.2085 43.7678 17.2322L27.8579 1.32233C26.8816 0.34602 25.2986 0.34602 24.3223 1.32233C23.346 2.29864 23.346 3.88155 24.3223 4.85786L38.4645 19L24.3223 33.1421C23.346 34.1184 23.346 35.7014 24.3223 36.6777C25.2986 37.654 26.8816 37.654 27.8579 36.6777L43.7678 20.7678ZM0 21.5L42 21.5V16.5L0 16.5L0 21.5Z"
-                                        fill="white"></path>
-                                </svg>
-                            </div>
-                        </button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+        <!-- Table -->
+        <div *ngIf="!loading && !error && conductores.length > 0" class="table-wrapper">
+            <table class="conductores-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Apellidos</th>
+                        <th>Licencia</th>
+                        <th>Email</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let conductor of conductores" class="conductor-row">
+                        <td>{{ conductor.nombre }}</td>
+                        <td>{{ conductor.apellidos }}</td>
+                        <td>{{ conductor.numero_licencia || conductor.licencia }}</td>
+                        <td>{{ conductor.email }}</td>
+                        <td>
+                            <button class="btn-select" (click)="selectConductor(conductor)">
+                                <div class="bgContainer">
+                                    <span>Ir</span>
+                                </div>
+                                <div class="arrowContainer">
+                                    <svg width="24" height="24" viewBox="0 0 45 38" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M43.7678 20.7678C44.7441 19.7915 44.7441 18.2085 43.7678 17.2322L27.8579 1.32233C26.8816 0.34602 25.2986 0.34602 24.3223 1.32233C23.346 2.29864 23.346 3.88155 24.3223 4.85786L38.4645 19L24.3223 33.1421C23.346 34.1184 23.346 35.7014 24.3223 36.6777C25.2986 37.654 26.8816 37.654 27.8579 36.6777L43.7678 20.7678ZM0 21.5L42 21.5V16.5L0 16.5L0 21.5Z"
+                                            fill="white"></path>
+                                    </svg>
+                                </div>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-    <!-- No data -->
-    <div *ngIf="!loading && !error && conductores.length === 0" class="no-data">
-        <p>No hay conductores disponibles</p>
+        <!-- No data -->
+        <div *ngIf="!loading && !error && conductores.length === 0" class="no-data">
+            <p>No hay conductores disponibles</p>
+        </div>
     </div>
 </div>

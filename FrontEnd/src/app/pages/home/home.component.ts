@@ -15,13 +15,13 @@ export class HomeComponent {
     @Optional() private mainLayout: MainLayoutComponent
   ) {}
 
-  onEmpezar() {
-    // Activar animación de burbujas
-    if (this.mainLayout) {
-      this.mainLayout.triggerAnimation();
-    }
-    
-    // Navegar inmediatamente para mejor UX
+  onIniciarDeteccion() {
+    // Navegar a seleccionar conductor para iniciar detección
     this.router.navigate(['/conductores']);
+  }
+
+  onVerHistorial() {
+    // Navegar a historial para seleccionar conductor real
+    this.router.navigate(['/historial']);
   }
 }
