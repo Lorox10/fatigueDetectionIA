@@ -150,7 +150,7 @@ python main.py
 ```
 [OK] Conectado a fatigue_detection
 INFO:     Started server process [XXXX]
-INFO:     Uvicorn running on http://127.0.0.1:8000
+INFO:     Uvicorn running on http://127.0.0.1:8000}
 INFO:     Application startup complete
 ```
 

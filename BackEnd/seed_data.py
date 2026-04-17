@@ -3,7 +3,8 @@ Script para insertar datos de ejemplo (seed) en la base de datos.
 Crea conductores con sesiones y telemetría realista.
 """
 import sys
-sys.path.insert(0, '/d/LORENZO/Escritorio/fatigueDetectionIA/BackEnd')
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import mysql.connector
 from datetime import datetime, timedelta
@@ -25,9 +26,11 @@ def clear_existing_data():
     cursor = conn.cursor()
     
     try:
-        cursor.execute("DELETE FROM telemetria")
-        cursor.execute("DELETE FROM sesiones")
-        cursor.execute("DELETE FROM conductores")
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        cursor.execute("TRUNCATE TABLE telemetria")
+        cursor.execute("TRUNCATE TABLE sesiones")
+        cursor.execute("TRUNCATE TABLE conductores")
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
         conn.commit()
         print("✓ Datos anteriores eliminados")
     except Exception as e:
@@ -50,6 +53,7 @@ def create_sample_conductores():
     ]
     
     try:
+        ids = []
         for nombre, apellidos, licencia, email, telefono in conductores:
             cursor.execute(
                 """
@@ -58,9 +62,10 @@ def create_sample_conductores():
                 """,
                 (nombre, apellidos, licencia, email, telefono)
             )
+            ids.append(cursor.lastrowid)
         conn.commit()
         print(f"✓ {len(conductores)} conductores creados")
-        return [i for i in range(1, len(conductores) + 1)]
+        return ids
     except Exception as e:
         print(f"Error creando conductores: {e}")
         conn.rollback()
